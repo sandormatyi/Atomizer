@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <array>
 #include "Bounce2.h"
 
 static constexpr int s_debounceIntervalMs = 5;
@@ -6,14 +7,16 @@ static constexpr int s_debounceIntervalMs = 5;
 static uint32_t lastJoystickX = 0;
 static uint32_t lastJoystickY = 0;
 
-Bounce button_1;
+static std::array<Bounce, 10> buttons;
 
-static constexpr int s_joystickXPin = 14;
-static constexpr int s_joystickYPin = 15;
+static constexpr int s_joystickXPin = 15;
+static constexpr int s_joystickYPin = 14;
 
 void setup() {
-  button_1.attach(2, INPUT_PULLUP);
-  button_1.interval(s_debounceIntervalMs);
+  for (auto i = 0; i < buttons.size(); ++i) {
+    buttons[i].attach(2 + i, INPUT_PULLUP);
+    buttons[i].interval(s_debounceIntervalMs);
+  }
 
   pinMode(s_joystickXPin, INPUT);
   pinMode(s_joystickYPin, INPUT);
@@ -26,14 +29,16 @@ void setup() {
 }
 
 void loop() {
-  button_1.update();
+  for (auto i = 0; i < buttons.size(); ++i) {
+    buttons[i].update();
 
-  if (button_1.fell()) {
-    Serial.println("Button is pressed");
-  }
+    if (buttons[i].fell()) {
+      Serial.printf("Button %d is pressed\n", i);
+    }
 
-  if (button_1.rose()) {
-    Serial.println("Button is released");
+    if (buttons[i].rose()) {
+      Serial.printf("Button %d is released\n", i);
+    }
   }
 
   const auto joystickX = analogRead(s_joystickXPin) / 8;
