@@ -39,11 +39,13 @@ uint8_t getAdjustedJoystickValue(int rawValue, int centerValue)
     if (abs(rawValue - centerValue) <= s_joystickCenterZone) {
       return s_targetCenterValue;
     } else if (rawValue < centerValue) {
-      const auto normalizedValue = (rawValue * s_targetCenterValue / centerValue);
-      return uint8_t(max(normalizedValue, 0));
+      float normalizedValue = rawValue / float(centerValue - s_joystickCenterZone); // 0..1
+      normalizedValue = normalizedValue * s_targetCenterValue;
+      return uint8_t(max(normalizedValue, 0.f));
     } else {
-      const auto normalizedValue = (rawValue - centerValue) * s_targetCenterValue / (1023 - centerValue) + 64;
-      return uint8_t(min(normalizedValue, 127));
+      float normalizedValue = (rawValue - centerValue - s_joystickCenterZone) / float(1023 - centerValue - s_joystickCenterZone); // 0..1
+      normalizedValue = normalizedValue * s_targetCenterValue + 64;
+      return uint8_t(min(normalizedValue, 128.0f));
     }
 }
 
@@ -103,7 +105,7 @@ void loop()
   if (adjustedX != lastJoystickX) {
     lastJoystickX = adjustedX;
 
-    Serial.printf("X CC: %d\n", adjustedX);
+    Serial.printf("X CC: %d (raw: %d)\n", adjustedX, joystickX);
     MIDI.sendControlChange(77, adjustedX, s_midiChannel);
   }
 
