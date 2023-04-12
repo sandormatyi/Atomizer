@@ -31,7 +31,7 @@ void playStartupSequence()
   }
 }
 
-uint8_t getAdjustedJoystickValue(int rawValue, int centerValue)
+uint8_t getMappedJoystickValue(int rawValue, int centerValue)
 {
   constexpr uint8_t s_targetCenterValue = 64;
   constexpr int s_joystickCenterZone = 4;
@@ -39,13 +39,11 @@ uint8_t getAdjustedJoystickValue(int rawValue, int centerValue)
     if (abs(rawValue - centerValue) <= s_joystickCenterZone) {
       return s_targetCenterValue;
     } else if (rawValue < centerValue) {
-      float normalizedValue = rawValue / float(centerValue - s_joystickCenterZone); // 0..1
-      normalizedValue = normalizedValue * s_targetCenterValue;
-      return uint8_t(max(normalizedValue, 0.f));
+      const auto mappedValue = map(rawValue, 0, centerValue - s_joystickCenterZone, 0, s_targetCenterValue);
+      return uint8_t(max(mappedValue, 0));
     } else {
-      float normalizedValue = (rawValue - centerValue - s_joystickCenterZone) / float(1023 - centerValue - s_joystickCenterZone); // 0..1
-      normalizedValue = normalizedValue * s_targetCenterValue + 64;
-      return uint8_t(min(normalizedValue, 127.0f));
+      const auto mappedValue = map(rawValue, centerValue + s_joystickCenterZone, 1023, s_targetCenterValue, 127);
+      return uint8_t(min(mappedValue, 127));
     }
 }
 
@@ -96,21 +94,21 @@ void loop()
   const auto joystickX = analogRead(PIN_JOYSTICK_X);
   const auto joystickY = analogRead(PIN_JOYSTICK_Y);
 
-  const auto adjustedX = getAdjustedJoystickValue(joystickX, joystickCenterX);
-  const auto adjustedY = getAdjustedJoystickValue(joystickY, joystickCenterY);
+  const auto mappedX = getMappedJoystickValue(joystickX, joystickCenterX);
+  const auto mappedY = getMappedJoystickValue(joystickY, joystickCenterY);
 
   static uint8_t lastJoystickX = 0;
   static uint8_t lastJoystickY = 0;
 
-  if (adjustedX != lastJoystickX) {
-    lastJoystickX = adjustedX;
+  if (mappedX != lastJoystickX) {
+    lastJoystickX = mappedX;
 
-    Serial.printf("X CC: %d (raw: %d)\n", adjustedX, joystickX);
-    MIDI.sendControlChange(77, adjustedX, s_midiChannel);
+    Serial.printf("X CC: %d (raw: %d)\n", mappedX, joystickX);
+    MIDI.sendControlChange(77, mappedX, s_midiChannel);
   }
 
-  if (adjustedY != lastJoystickY) {
-    lastJoystickY = adjustedY;
+  if (mappedY != lastJoystickY) {
+    lastJoystickY = mappedY;
 
     // TODO
   }
