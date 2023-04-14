@@ -4,6 +4,7 @@
 #include "Bounce2.h"
 
 #define PIN_BUTTON_1 2
+#define PIN_BUTTON_JOYSTICK 12
 #define PIN_JOYSTICK_X 15
 #define PIN_JOYSTICK_Y 14
 
@@ -11,6 +12,7 @@ static constexpr int s_debounceIntervalMs = 5;
 
 static int joystickCenterX = 0;
 static int joystickCenterY = 0;
+static Bounce joystickButton;
 
 static std::array<Bounce, 10> buttons;
 constexpr std::array<uint8_t, 10> s_buttonsToMidiNotes {40, 41, 43, 45, 46, 44, 42, 37, 39, 38};
@@ -34,7 +36,7 @@ void playStartupSequence()
 uint8_t getMappedJoystickValue(int rawValue, int centerValue)
 {
   constexpr uint8_t s_targetCenterValue = 64;
-  constexpr int s_joystickCenterZone = 4;
+  constexpr int s_joystickCenterZone = 1;
 
     if (abs(rawValue - centerValue) <= s_joystickCenterZone) {
       return s_targetCenterValue;
@@ -55,6 +57,8 @@ void setup()
     buttons[i].attach(2 + i, INPUT_PULLUP);
     buttons[i].interval(s_debounceIntervalMs);
   }
+  joystickButton.attach(PIN_BUTTON_JOYSTICK, INPUT_PULLUP);
+  joystickButton.interval(s_debounceIntervalMs);
 
   pinMode(PIN_JOYSTICK_X, INPUT);
   pinMode(PIN_JOYSTICK_Y, INPUT);
@@ -91,6 +95,15 @@ void loop()
     }
   }
 
+  joystickButton.update();
+  if (joystickButton.fell()) {
+      Serial.println("Joystick button is pressed");
+  }
+
+  if (joystickButton.rose()) {
+      Serial.println("Joystick button is released");
+  }
+
   const auto joystickX = analogRead(PIN_JOYSTICK_X);
   const auto joystickY = analogRead(PIN_JOYSTICK_Y);
 
@@ -110,6 +123,7 @@ void loop()
   if (mappedY != lastJoystickY) {
     lastJoystickY = mappedY;
 
-    // TODO
+    Serial.printf("Y CC: %d (raw: %d)\n", mappedY, joystickY);
+    MIDI.sendAfterTouch(mappedY, s_midiChannel);
   }
 }
